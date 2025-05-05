@@ -1,5 +1,24 @@
-const Enclosure = require('../models/enclosure');
 const Animal = require('../models/animal');
+
+const handleErrorResponse = (res, statusCode, error) => {
+  res.status(statusCode).json({ error: error.message });
+};
+
+const validateEnclosureExists = (enclosure, res) => {
+  if (!enclosure) {
+    res.status(404).json({ error: 'Enclosure not found' });
+    return false;
+  }
+  return true;
+};
+
+const validateAnimalAndEnclosureExist = (enclosure, animal, res) => {
+  if (!enclosure || !animal) {
+    res.status(404).json({ error: 'Enclosure or Animal not found' });
+    return false;
+  }
+  return true;
+};
 
 exports.createEnclosure = async (req, res) => {
   try {
@@ -8,7 +27,7 @@ exports.createEnclosure = async (req, res) => {
     await enclosure.save();
     res.status(201).json(enclosure);
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    handleErrorResponse(res, 400, error);
   }
 };
 
@@ -17,19 +36,17 @@ exports.getAllEnclosures = async (req, res) => {
     const enclosures = await Enclosure.find().populate('animals');
     res.json(enclosures);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    handleErrorResponse(res, 500, error);
   }
 };
 
 exports.getEnclosureById = async (req, res) => {
   try {
     const enclosure = await Enclosure.findById(req.params.id).populate('animals');
-    if (!enclosure) {
-      return res.status(404).json({ error: 'Enclosure not found' });
-    }
+    if (!validateEnclosureExists(enclosure, res)) return;
     res.json(enclosure);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    handleErrorResponse(res, 500, error);
   }
 };
 
@@ -40,28 +57,26 @@ exports.updateEnclosure = async (req, res) => {
       req.body,
       { new: true }
     );
-    if (!enclosure) {
-      return res.status(404).json({ error: 'Enclosure not found' });
-    }
+    if (!validateEnclosureExists(enclosure, res)) return;
     res.json(enclosure);
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    handleErrorResponse(res, 400, error);
   }
 };
 
 exports.deleteEnclosure = async (req, res) => {
   try {
     const enclosure = await Enclosure.findByIdAndDelete(req.params.id);
-    if (!enclosure) {
-      return res.status(404).json({ error: 'Enclosure not found' });
-    }
+    if (!validateEnclosureExists(enclosure, res)) return;
+    
     await Animal.updateMany(
       { enclosure: enclosure._id },
       { $unset: { enclosure: 1 } }
     );
+    
     res.json({ message: 'Enclosure deleted successfully' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    handleErrorResponse(res, 500, error);
   }
 };
 
@@ -74,19 +89,19 @@ exports.getVisibleAnimals = async (req, res) => {
     }).populate('enclosure');
     res.json(animals);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    handleErrorResponse(res, 500, error);
   }
 };
 
 exports.addAnimalToEnclosure = async (req, res) => {
   try {
     const { animalId } = req.body;
-    const enclosure = await Enclosure.findById(req.params.id);
-    const animal = await Animal.findById(animalId);
+    const [enclosure, animal] = await Promise.all([
+      Enclosure.findById(req.params.id),
+      Animal.findById(animalId)
+    ]);
 
-    if (!enclosure || !animal) {
-      return res.status(404).json({ error: 'Enclosure or Animal not found' });
-    }
+    if (!validateAnimalAndEnclosureExist(enclosure, animal, res)) return;
 
     if (enclosure.animals.length >= enclosure.capacity) {
       return res.status(400).json({ error: 'Enclosure at full capacity' });
@@ -95,33 +110,31 @@ exports.addAnimalToEnclosure = async (req, res) => {
     enclosure.animals.push(animalId);
     animal.enclosure = enclosure._id;
     
-    await enclosure.save();
-    await animal.save();
+    await Promise.all([enclosure.save(), animal.save()]);
     
     res.json(enclosure);
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    handleErrorResponse(res, 400, error);
   }
 };
 
 exports.removeAnimalFromEnclosure = async (req, res) => {
   try {
     const { animalId } = req.params;
-    const enclosure = await Enclosure.findById(req.params.id);
-    const animal = await Animal.findById(animalId);
+    const [enclosure, animal] = await Promise.all([
+      Enclosure.findById(req.params.id),
+      Animal.findById(animalId)
+    ]);
 
-    if (!enclosure || !animal) {
-      return res.status(404).json({ error: 'Enclosure or Animal not found' });
-    }
+    if (!validateAnimalAndEnclosureExist(enclosure, animal, res)) return;
 
     enclosure.animals = enclosure.animals.filter(id => id.toString() !== animalId);
     animal.enclosure = undefined;
     
-    await enclosure.save();
-    await animal.save();
+    await Promise.all([enclosure.save(), animal.save()]);
     
     res.json(enclosure);
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    handleErrorResponse(res, 400, error);
   }
 };
