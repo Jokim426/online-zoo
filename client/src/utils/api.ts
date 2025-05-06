@@ -1,63 +1,44 @@
-import axios from 'axios';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
 
-const api = axios.create({
-  baseURL: API_BASE_URL,
-});
+const api = axios.create({ baseURL: API_BASE_URL });
 
 const setAuthHeader = (token) => {
   if (token) {
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-  } else {
-    delete api.defaults.headers.common['Authorization'];
+    return;
   }
+  delete api.defaults.headers.common['Authorization'];
 };
 
-const get = async (endpoint, params = {}) => {
+const handleRequest = async (request) => {
   try {
-    const response = await api.get(endpoint, { params });
+    const response = await request;
     return response.data;
   } catch (error) {
     throw error.response ? error.response.data : error;
   }
 };
 
-const post = async (endpoint, data = {}) => {
-  try {
-    const response = await api.post(endpoint, data);
-    return response.data;
-  } catch (error) {
-    throw error.response ? error.response.data : error;
-  }
-};
+const get = (endpoint, params = {}) => (
+  handleRequest(api.get(endpoint, { params }))
+);
 
-const put = async (endpoint, data = {}) => {
-  try {
-    const response = await api.put(endpoint, data);
-    return response.data;
-  } catch (error) {
-    throw error.response ? error.response.data : error;
-  }
-};
+const post = (endpoint, data = {}) => (
+  handleRequest(api.post(endpoint, data))
+);
 
-const patch = async (endpoint, data = {}) => {
-  try {
-    const response = await api.patch(endpoint, data);
-    return response.data;
-  } catch (error) {
-    throw error.response ? error.response.data : error;
-  }
-};
+const put = (endpoint, data = {}) => (
+  handleRequest(api.put(endpoint, data))
+);
 
-const del = async (endpoint) => {
-  try {
-    const response = await api.delete(endpoint);
-    return response.data;
-  } catch (error) {
-    throw error.response ? error.response.data : error;
-  }
-};
+const patch = (endpoint, data = {}) => (
+  handleRequest(api.patch(endpoint, data))
+);
+
+const del = (endpoint) => (
+  handleRequest(api.delete(endpoint))
+);
 
 export default {
   setAuthHeader,
