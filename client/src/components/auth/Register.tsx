@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
 import axios from 'axios';
+
+const ANIMALS = ['Dog', 'Cat', 'Bird', 'Fish', 'Other'];
+const API_URL = 'https://api.example.com/register';
 
 const RegistrationForm = () => {
   const [formData, setFormData] = useState({
@@ -11,49 +13,52 @@ const RegistrationForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
 
-  const animals = ['Dog', 'Cat', 'Bird', 'Fish', 'Other'];
-
   const validateForm = () => {
     const newErrors = {};
+    
     if (!formData.email) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Email is invalid';
     }
+
     if (!formData.password) {
       newErrors.password = 'Password is required';
     } else if (formData.password.length < 6) {
       newErrors.password = 'Password must be at least 6 characters';
     }
+
     if (!formData.animal) {
       newErrors.animal = 'Please select an animal';
     }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
+  const handleChange = ({ target: { name, value } }) => {
+    setFormData(prev => ({
+      ...prev,
       [name]: value
-    });
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (validateForm()) {
-      setIsSubmitting(true);
-      try {
-        const response = await axios.post('https://api.example.com/register', formData);
-        if (response.status === 201) {
-          setRegistrationSuccess(true);
-        }
-      } catch (error) {
-        setErrors({ ...errors, api: 'Registration failed. Please try again.' });
-      } finally {
-        setIsSubmitting(false);
+    
+    if (!validateForm()) return;
+
+    setIsSubmitting(true);
+    
+    try {
+      const response = await axios.post(API_URL, formData);
+      if (response.status === 201) {
+        setRegistrationSuccess(true);
       }
+    } catch (error) {
+      setErrors(prev => ({ ...prev, api: 'Registration failed. Please try again.' }));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -66,36 +71,28 @@ const RegistrationForm = () => {
     );
   }
 
+  const renderInput = (name, type, label) => (
+    <div className="form-group">
+      <label htmlFor={name}>{label}</label>
+      <input
+        type={type}
+        id={name}
+        name={name}
+        value={formData[name]}
+        onChange={handleChange}
+        className={errors[name] ? 'error-input' : ''}
+      />
+      {errors[name] && <span className="error">{errors[name]}</span>}
+    </div>
+  );
+
   return (
     <form onSubmit={handleSubmit} className="registration-form">
       <h2>Register</h2>
       {errors.api && <div className="error">{errors.api}</div>}
       
-      <div className="form-group">
-        <label htmlFor="email">Email</label>
-        <input
-          type="email"
-          id="email"
-          name="email"
-          value={formData.email}
-          onChange={handleChange}
-          className={errors.email ? 'error-input' : ''}
-        />
-        {errors.email && <span className="error">{errors.email}</span>}
-      </div>
-
-      <div className="form-group">
-        <label htmlFor="password">Password</label>
-        <input
-          type="password"
-          id="password"
-          name="password"
-          value={formData.password}
-          onChange={handleChange}
-          className={errors.password ? 'error-input' : ''}
-        />
-        {errors.password && <span className="error">{errors.password}</span>}
-      </div>
+      {renderInput('email', 'email', 'Email')}
+      {renderInput('password', 'password', 'Password')}
 
       <div className="form-group">
         <label htmlFor="animal">Favorite Animal</label>
@@ -107,10 +104,8 @@ const RegistrationForm = () => {
           className={errors.animal ? 'error-input' : ''}
         >
           <option value="">Select an animal</option>
-          {animals.map((animal) => (
-            <option key={animal} value={animal}>
-              {animal}
-            </option>
+          {ANIMALS.map(animal => (
+            <option key={animal} value={animal}>{animal}</option>
           ))}
         </select>
         {errors.animal && <span className="error">{errors.animal}</span>}
