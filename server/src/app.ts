@@ -1,58 +1,73 @@
-const express = require('express');
-const morgan = require('morgan');
-const cors = require('cors');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-const mongoSanitize = require('express-mongo-sanitize');
-const xss = require('xss-clean');
-const hpp = require('hpp');
-const cookieParser = require('cookie-parser');
+import express from 'express';
+import morgan from 'morgan';
+import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import mongoSanitize from 'express-mongo-sanitize';
+import xss from 'xss-clean';
+import hpp from 'hpp';
+import cookieParser from 'cookie-parser';
 
-const AppError = require('./utils/appError');
-const globalErrorHandler = require('./controllers/errorController');
-const userRouter = require('./routes/userRoutes');
-const postRouter = require('./routes/postRoutes');
+import AppError from './utils/appError';
+import globalErrorHandler from './controllers/errorController';
+import userRouter from './routes/userRoutes';
+import postRouter from './routes/postRoutes';
 
 const app = express();
 
-app.enable('trust proxy');
+const initializeSecurity = () => {
+  app.enable('trust proxy');
+  app.use(helmet());
+  app.use(cors({
+    origin: process.env.FRONTEND_URL,
+    credentials: true
+  }));
+  app.options('*', cors());
+};
 
-app.use(cors({
-  origin: process.env.FRONTEND_URL,
-  credentials: true
-}));
+const initializeRequestParsing = () => {
+  app.use(express.json({ limit: '10kb' }));
+  app.use(cookieParser());
+};
 
-app.options('*', cors());
+const initializeRequestSanitization = () => {
+  app.use(mongoSanitize());
+  app.use(xss());
+  app.use(hpp({
+    whitelist: ['duration', 'ratingsQuantity', 'ratingsAverage', 'difficulty']
+  }));
+};
 
-if (process.env.NODE_ENV === 'development') {
-  app.use(morgan('dev'));
-}
+const initializeRateLimiting = () => {
+  const limiter = rateLimit({
+    max: 100,
+    windowMs: 60 * 60 * 1000,
+    message: 'Too many requests from this IP, please try again in an hour!'
+  });
+  app.use('/api', limiter);
+};
 
-const limiter = rateLimit({
-  max: 100,
-  windowMs: 60 * 60 * 1000,
-  message: 'Too many requests from this IP, please try again in an hour!'
-});
+const initializeLogging = () => {
+  if (process.env.NODE_ENV === 'development') {
+    app.use(morgan('dev'));
+  }
+};
 
-app.use('/api', limiter);
+const initializeRoutes = () => {
+  app.use('/api/v1/users', userRouter);
+  app.use('/api/v1/posts', postRouter);
+  app.all('*', (req, res, next) => {
+    next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
+  });
+};
 
-app.use(express.json({ limit: '10kb' }));
-app.use(cookieParser());
-app.use(mongoSanitize());
-app.use(xss());
-app.use(hpp({
-  whitelist: ['duration', 'ratingsQuantity', 'ratingsAverage', 'difficulty']
-}));
-
-app.use(helmet());
-
-app.use('/api/v1/users', userRouter);
-app.use('/api/v1/posts', postRouter);
-
-app.all('*', (req, res, next) => {
-  next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
-});
+initializeSecurity();
+initializeRequestParsing();
+initializeRequestSanitization();
+initializeRateLimiting();
+initializeLogging();
+initializeRoutes();
 
 app.use(globalErrorHandler);
 
-module.exports = app;
+export default app;
