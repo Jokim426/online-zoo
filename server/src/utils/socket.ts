@@ -1,3 +1,4 @@
+import express from 'express';
 import http from 'http';
 import socketIo from 'socket.io';
 import cors from 'cors';
@@ -21,8 +22,6 @@ interface Enclosure {
 
 const initializeServer = () => {
   const app = express();
-  app.use(cors());
-
   const server = http.createServer(app);
   const io = new socketIo.Server(server, {
     cors: {
@@ -33,6 +32,8 @@ const initializeServer = () => {
 
   const PORT = process.env.PORT || 3000;
   const animalEnclosures: Record<string, Enclosure> = {};
+
+  app.use(cors());
 
   const getOrCreateEnclosure = (enclosureId: string): Enclosure => {
     if (!animalEnclosures[enclosureId]) {
@@ -47,7 +48,12 @@ const initializeServer = () => {
     socket.emit('enclosureData', enclosure);
   };
 
-  const handleAnimalInteraction = (socket: socketIo.Socket, enclosureId: string, animalId: string, interactionType: string) => {
+  const handleAnimalInteraction = (
+    socket: socketIo.Socket,
+    enclosureId: string,
+    animalId: string,
+    interactionType: string
+  ) => {
     const enclosure = animalEnclosures[enclosureId];
     if (!enclosure) return;
 
@@ -61,7 +67,11 @@ const initializeServer = () => {
     io.to(enclosureId).emit('newInteraction', interaction);
   };
 
-  const handleAddAnimal = (socket: socketIo.Socket, enclosureId: string, animalData: Animal) => {
+  const handleAddAnimal = (
+    socket: socketIo.Socket,
+    enclosureId: string,
+    animalData: Animal
+  ) => {
     const enclosure = animalEnclosures[enclosureId];
     if (!enclosure) return;
 
@@ -72,12 +82,14 @@ const initializeServer = () => {
   const setupSocketEvents = (socket: socketIo.Socket) => {
     console.log('New client connected:', socket.id);
 
-    socket.on('joinEnclosure', (enclosureId) => handleJoinEnclosure(socket, enclosureId));
+    socket.on('joinEnclosure', (enclosureId) => 
+      handleJoinEnclosure(socket, enclosureId));
     socket.on('animalInteraction', ({ enclosureId, animalId, interactionType }) => 
       handleAnimalInteraction(socket, enclosureId, animalId, interactionType));
     socket.on('addAnimal', ({ enclosureId, animalData }) => 
       handleAddAnimal(socket, enclosureId, animalData));
-    socket.on('disconnect', () => console.log('Client disconnected:', socket.id));
+    socket.on('disconnect', () => 
+      console.log('Client disconnected:', socket.id));
   };
 
   io.on('connection', setupSocketEvents);
