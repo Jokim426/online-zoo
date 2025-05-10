@@ -1,4 +1,4 @@
-import axios from 'axios';
+import { useState } from 'react';
 
 const ANIMALS = ['Dog', 'Cat', 'Bird', 'Fish', 'Other'];
 const API_URL = 'https://api.example.com/register';
@@ -13,27 +13,36 @@ const RegistrationForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
 
+  const validateEmail = (email) => {
+    if (!email) return 'Email is required';
+    if (!/\S+@\S+\.\S+/.test(email)) return 'Email is invalid';
+    return '';
+  };
+
+  const validatePassword = (password) => {
+    if (!password) return 'Password is required';
+    if (password.length < 6) return 'Password must be at least 6 characters';
+    return '';
+  };
+
+  const validateAnimal = (animal) => {
+    if (!animal) return 'Please select an animal';
+    return '';
+  };
+
   const validateForm = () => {
-    const newErrors = {};
-    
-    if (!formData.email) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
-    }
+    const newErrors = {
+      email: validateEmail(formData.email),
+      password: validatePassword(formData.password),
+      animal: validateAnimal(formData.animal)
+    };
 
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-    }
+    const filteredErrors = Object.fromEntries(
+      Object.entries(newErrors).filter(([_, value]) => value)
+    );
 
-    if (!formData.animal) {
-      newErrors.animal = 'Please select an animal';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    setErrors(filteredErrors);
+    return Object.keys(filteredErrors).length === 0;
   };
 
   const handleChange = ({ target: { name, value } }) => {
@@ -62,15 +71,6 @@ const RegistrationForm = () => {
     }
   };
 
-  if (registrationSuccess) {
-    return (
-      <div className="success-message">
-        <h2>Registration Successful!</h2>
-        <p>Thank you for registering.</p>
-      </div>
-    );
-  }
-
   const renderInput = (name, type, label) => (
     <div className="form-group">
       <label htmlFor={name}>{label}</label>
@@ -85,6 +85,15 @@ const RegistrationForm = () => {
       {errors[name] && <span className="error">{errors[name]}</span>}
     </div>
   );
+
+  if (registrationSuccess) {
+    return (
+      <div className="success-message">
+        <h2>Registration Successful!</h2>
+        <p>Thank you for registering.</p>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="registration-form">
