@@ -1,14 +1,16 @@
-import { useState } from 'react';
+import axios from 'axios';
 
 const ANIMALS = ['Dog', 'Cat', 'Bird', 'Fish', 'Other'];
 const API_URL = 'https://api.example.com/register';
 
 const RegistrationForm = () => {
-  const [formData, setFormData] = useState({
+  const initialFormState = {
     email: '',
     password: '',
     animal: ''
-  });
+  };
+
+  const [formData, setFormData] = useState(initialFormState);
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
@@ -63,6 +65,7 @@ const RegistrationForm = () => {
       const response = await axios.post(API_URL, formData);
       if (response.status === 201) {
         setRegistrationSuccess(true);
+        setFormData(initialFormState);
       }
     } catch (error) {
       setErrors(prev => ({ ...prev, api: 'Registration failed. Please try again.' }));
