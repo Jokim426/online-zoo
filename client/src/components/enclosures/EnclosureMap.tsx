@@ -1,10 +1,22 @@
-import './ZooMap.css';
+import { useState } from 'react';
 
-const ZooMap = ({ enclosures }) => {
-  const [selectedEnclosure, setSelectedEnclosure] = useState(null);
-  const [currentView, setCurrentView] = useState('map');
+interface Enclosure {
+  id: string;
+  name: string;
+  animals: string[];
+  description?: string;
+  image?: string;
+}
 
-  const handleEnclosureClick = (enclosure) => {
+interface ZooMapProps {
+  enclosures: Enclosure[];
+}
+
+const ZooMap = ({ enclosures }: ZooMapProps) => {
+  const [selectedEnclosure, setSelectedEnclosure] = useState<Enclosure | null>(null);
+  const [currentView, setCurrentView] = useState<'map' | 'detail'>('map');
+
+  const handleEnclosureClick = (enclosure: Enclosure) => {
     setSelectedEnclosure(enclosure);
     setCurrentView('detail');
   };
@@ -18,35 +30,41 @@ const ZooMap = ({ enclosures }) => {
     <div className="map-view">
       <h2>Zoo Map</h2>
       <div className="enclosures-grid">
-        {enclosures.map(({ id, name, animals }) => (
+        {enclosures.map((enclosure) => (
           <div
-            key={id}
+            key={enclosure.id}
             className="enclosure"
-            onClick={() => handleEnclosureClick({ id, name, animals })}
+            onClick={() => handleEnclosureClick(enclosure)}
           >
-            <div className="enclosure-name">{name}</div>
-            <div className="enclosure-animals">{animals.join(', ')}</div>
+            <div className="enclosure-name">{enclosure.name}</div>
+            <div className="enclosure-animals">{enclosure.animals.join(', ')}</div>
           </div>
         ))}
       </div>
     </div>
   );
 
-  const renderDetailView = () => (
-    <div className="detail-view">
-      <button onClick={handleBackClick} className="back-button">
-        ← Back to Map
-      </button>
-      <h2>{selectedEnclosure.name}</h2>
-      <p>Animals: {selectedEnclosure.animals.join(', ')}</p>
-      <p>{selectedEnclosure.description}</p>
-      <img
-        src={selectedEnclosure.image}
-        alt={selectedEnclosure.name}
-        className="enclosure-image"
-      />
-    </div>
-  );
+  const renderDetailView = () => {
+    if (!selectedEnclosure) return null;
+
+    return (
+      <div className="detail-view">
+        <button onClick={handleBackClick} className="back-button">
+          ← Back to Map
+        </button>
+        <h2>{selectedEnclosure.name}</h2>
+        <p>Animals: {selectedEnclosure.animals.join(', ')}</p>
+        {selectedEnclosure.description && <p>{selectedEnclosure.description}</p>}
+        {selectedEnclosure.image && (
+          <img
+            src={selectedEnclosure.image}
+            alt={selectedEnclosure.name}
+            className="enclosure-image"
+          />
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="zoo-map-container">
